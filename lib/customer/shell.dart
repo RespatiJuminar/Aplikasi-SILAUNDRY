@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import '../pages/account_settings_page.dart';
-import '../pages/customers_page.dart';
-import '../pages/dashboard_page.dart';
-import '../pages/orders_page.dart';
-import '../pages/service_list_page.dart';
+import 'account_settings_page.dart';
+import 'dashboard_page.dart';
+import 'orders_page.dart';
+import 'service_list_page.dart';
 import '../theme.dart';
 import 'dialogs.dart';
 
-enum NavItem { dashboard, users, orders, services, account }
+enum NavItem { dashboard, services, orders, account }
 
 /// Pindah halaman tanpa animasi, supaya terasa seperti aplikasi desktop.
 void replacePage(BuildContext context, Widget page) {
@@ -24,12 +23,10 @@ Widget _pageFor(NavItem item) {
   switch (item) {
     case NavItem.dashboard:
       return const DashboardPage();
-    case NavItem.users:
-      return const CustomersPage();
-    case NavItem.orders:
-      return const OrdersPage();
     case NavItem.services:
       return const ServiceListPage();
+    case NavItem.orders:
+      return const OrdersPage();
     case NavItem.account:
       return const AccountSettingsPage();
   }
@@ -63,22 +60,16 @@ class Sidebar extends StatelessWidget {
             onTap: () => _go(context, NavItem.dashboard),
           ),
           _NavButton(
-            icon: Icons.person,
-            tooltip: 'Customers',
-            selected: current == NavItem.users,
-            onTap: () => _go(context, NavItem.users),
-          ),
-          _NavButton(
             icon: Icons.shopping_cart_outlined,
-            tooltip: 'Orders',
-            selected: current == NavItem.orders,
-            onTap: () => _go(context, NavItem.orders),
-          ),
-          _NavButton(
-            icon: Icons.settings,
             tooltip: 'Service List',
             selected: current == NavItem.services,
             onTap: () => _go(context, NavItem.services),
+          ),
+          _NavButton(
+            icon: Icons.receipt_long,
+            tooltip: 'Orders',
+            selected: current == NavItem.orders,
+            onTap: () => _go(context, NavItem.orders),
           ),
           const Spacer(flex: 2),
           _NavButton(
@@ -153,7 +144,7 @@ class _NavButton extends StatelessWidget {
   }
 }
 
-/// Kerangka halaman dashboard: sidebar + judul halaman + isi.
+/// Kerangka halaman: sidebar + judul halaman + isi.
 class AppShell extends StatelessWidget {
   const AppShell({
     super.key,

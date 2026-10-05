@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/shell.dart';
+import 'shell.dart';
 import 'dashboard_page.dart';
 
 const _monoStyle = TextStyle(

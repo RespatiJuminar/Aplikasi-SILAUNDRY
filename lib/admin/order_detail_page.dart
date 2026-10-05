@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/shell.dart';
+import 'shell.dart';
 import 'orders_page.dart';
 
 class OrderDetailPage extends StatelessWidget {

@@ -3,8 +3,8 @@ import '../data/app_state.dart';
 import '../data/models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/dialogs.dart';
-import '../widgets/shell.dart';
+import 'dialogs.dart';
+import 'shell.dart';
 import 'new_user_page.dart';
 
 class CustomersPage extends StatefulWidget {

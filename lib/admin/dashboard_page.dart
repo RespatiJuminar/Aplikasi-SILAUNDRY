@@ -3,7 +3,7 @@ import '../data/app_state.dart';
 import '../data/models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/shell.dart';
+import 'shell.dart';
 import 'new_order_page.dart';
 import 'orders_page.dart';
 

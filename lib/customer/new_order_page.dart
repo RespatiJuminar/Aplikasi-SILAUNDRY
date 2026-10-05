@@ -3,8 +3,8 @@ import '../data/app_state.dart';
 import '../data/models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/shell.dart';
-import 'orders_page.dart';
+import 'shell.dart';
+import 'checkout_page.dart';
 
 class NewOrderPage extends StatefulWidget {
   const NewOrderPage({super.key});
@@ -16,7 +16,7 @@ class NewOrderPage extends StatefulWidget {
 class _NewOrderPageState extends State<NewOrderPage> {
   final _qty = TextEditingController();
   final _detail = TextEditingController();
-  String? _customerId;
+  late final _customer = TextEditingController(text: appState.currentUser?.name ?? '');
   String? _serviceId;
   final List<OrderItem> _cart = [];
 
@@ -26,14 +26,11 @@ class _NewOrderPageState extends State<NewOrderPage> {
   void dispose() {
     _qty.dispose();
     _detail.dispose();
+    _customer.dispose();
     super.dispose();
   }
 
   void _addToCart() {
-    if (_customerId == null) {
-      showMessage(context, 'Choose a customer first');
-      return;
-    }
     if (_serviceId == null) {
       showMessage(context, 'Choose a service first');
       return;
@@ -57,15 +54,13 @@ class _NewOrderPageState extends State<NewOrderPage> {
     });
   }
 
-  void _checkout() {
+  void _toPayment() {
     if (_cart.isEmpty) {
       showMessage(context, 'The cart is empty');
       return;
     }
-    final customer = appState.customers.firstWhere((c) => c.id == _customerId);
-    final order = appState.createOrder(customer: customer, items: _cart);
-    showMessage(context, 'Order ${order.id} created (${formatRupiah(order.total)})');
-    replacePage(context, const OrdersPage());
+    final order = appState.createOrder(items: _cart);
+    replacePage(context, CheckoutPage(order: order));
   }
 
   @override
@@ -87,15 +82,10 @@ class _NewOrderPageState extends State<NewOrderPage> {
                   children: [
                     const Text('Create Order', style: AppText.heading),
                     const SizedBox(height: 20),
-                    AppDropdown<String>(
+                    AppTextField(
                       label: 'Customer Name',
-                      value: _customerId,
-                      hint: 'Choose customer',
-                      items: [
-                        for (final c in appState.customers)
-                          DropdownMenuItem(value: c.id, child: Text('${c.name} (${c.username})')),
-                      ],
-                      onChanged: (v) => setState(() => _customerId = v),
+                      controller: _customer,
+                      readOnly: true,
                     ),
                     const SizedBox(height: 10),
                     AppDropdown<String>(
@@ -180,7 +170,7 @@ class _NewOrderPageState extends State<NewOrderPage> {
                         width: 220,
                         height: 48,
                         radius: 12,
-                        onPressed: _checkout,
+                        onPressed: _toPayment,
                       ),
                     ),
                   ],

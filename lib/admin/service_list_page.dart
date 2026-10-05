@@ -3,8 +3,8 @@ import '../data/app_state.dart';
 import '../data/models.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/dialogs.dart';
-import '../widgets/shell.dart';
+import 'dialogs.dart';
+import 'shell.dart';
 
 class ServiceListPage extends StatefulWidget {
   const ServiceListPage({super.key});

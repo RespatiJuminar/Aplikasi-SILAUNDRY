@@ -5,9 +5,12 @@ import '../theme.dart';
 import '../widgets/auth_layout.dart';
 import '../widgets/common.dart';
 import 'login_page.dart';
+import 'role_toggle.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+  const RegisterPage({super.key, this.initialRole = UserRole.customer});
+
+  final UserRole initialRole;
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -21,6 +24,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _dob = TextEditingController();
   final _phone = TextEditingController();
   final _password = TextEditingController();
+  late UserRole _role = widget.initialRole;
 
   @override
   void dispose() {
@@ -51,14 +55,26 @@ class _RegisterPageState extends State<RegisterPage> {
 
   void _signUp() {
     if (!_form.currentState!.validate()) return;
-    final err = appState.registerAdmin(AdminAccount(
-      username: _username.text.trim(),
-      name: _name.text.trim(),
-      address: _address.text.trim(),
-      dob: _dob.text,
-      phone: _phone.text.trim(),
-      password: _password.text,
-    ));
+    final String? err;
+    if (_role == UserRole.admin) {
+      err = appState.registerAdmin(AdminAccount(
+        username: _username.text.trim(),
+        name: _name.text.trim(),
+        address: _address.text.trim(),
+        dob: _dob.text,
+        phone: _phone.text.trim(),
+        password: _password.text,
+      ));
+    } else {
+      err = appState.register(
+        username: _username.text.trim(),
+        name: _name.text.trim(),
+        address: _address.text.trim(),
+        dob: _dob.text,
+        phone: _phone.text.trim(),
+        password: _password.text,
+      );
+    }
     if (err != null) {
       showMessage(context, err);
       return;
@@ -103,7 +119,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
+            RoleToggle(role: _role, onChanged: (r) => setState(() => _role = r)),
+            const SizedBox(height: 18),
             AppTextField(
               label: 'Username',
               hint: 'Username',
@@ -112,7 +130,7 @@ class _RegisterPageState extends State<RegisterPage> {
               outlined: true,
               validator: requiredField,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             AppTextField(
               label: 'Name',
               hint: 'Name',
@@ -121,7 +139,7 @@ class _RegisterPageState extends State<RegisterPage> {
               outlined: true,
               validator: requiredField,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             AppTextField(
               label: 'Address',
               hint: 'Address',
@@ -130,7 +148,7 @@ class _RegisterPageState extends State<RegisterPage> {
               outlined: true,
               validator: requiredField,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -160,7 +178,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             AppTextField(
               label: 'Password',
               hint: '*Password length (10-32)',
@@ -171,7 +189,7 @@ class _RegisterPageState extends State<RegisterPage> {
               validator: passwordField,
               onSubmitted: (_) => _signUp(),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             Center(
               child: AppButton(
                 text: 'Sign Up',

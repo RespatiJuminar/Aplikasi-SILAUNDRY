@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../admin/landing_page.dart' as admin;
+import '../customer/landing_page.dart' as customer;
 import '../data/app_state.dart';
 import '../theme.dart';
 import '../widgets/auth_layout.dart';
 import '../widgets/common.dart';
-import 'landing_page.dart';
 import 'register_page.dart';
+import 'role_toggle.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,6 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final _form = GlobalKey<FormState>();
   final _username = TextEditingController();
   final _password = TextEditingController();
+  UserRole _role = UserRole.customer;
 
   @override
   void dispose() {
@@ -27,18 +30,22 @@ class _LoginPageState extends State<LoginPage> {
 
   void _login() {
     if (!_form.currentState!.validate()) return;
-    final ok = appState.login(_username.text.trim(), _password.text);
+    final ok = appState.login(_username.text.trim(), _password.text, _role);
     if (!ok) {
       showMessage(context, 'Wrong username or password');
       return;
     }
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LandingPage()),
-    );
+    final Widget next = _role == UserRole.admin
+        ? const admin.LandingPage()
+        : const customer.LandingPage();
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => next));
   }
 
   @override
   Widget build(BuildContext context) {
+    final demo = _role == UserRole.admin
+        ? 'Demo: username "admin", password "admin12345"'
+        : 'Demo: username "budi01", password "rahasia12345"';
     return AuthLayout(
       form: Form(
         key: _form,
@@ -61,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
                     onTap: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const RegisterPage()),
+                      MaterialPageRoute(builder: (_) => RegisterPage(initialRole: _role)),
                     ),
                     child: const Text(
                       'Sign Up',
@@ -75,7 +82,9 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 26),
+            RoleToggle(role: _role, onChanged: (r) => setState(() => _role = r)),
+            const SizedBox(height: 26),
             AppTextField(
               label: 'Username',
               hint: 'Insert Username',
@@ -95,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
               validator: requiredField,
               onSubmitted: (_) => _login(),
             ),
-            const SizedBox(height: 44),
+            const SizedBox(height: 40),
             Center(
               child: AppButton(
                 text: 'Login',
@@ -106,10 +115,10 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             const SizedBox(height: 16),
-            const Center(
+            Center(
               child: Text(
-                'Demo: username "admin", password "admin12345"',
-                style: TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
+                demo,
+                style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
               ),
             ),
           ],

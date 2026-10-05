@@ -1,4 +1,4 @@
-/// Akun admin (untuk login, register, dan Account Settings).
+/// Akun admin (untuk login, register, dan Account Settings admin).
 class AdminAccount {
   AdminAccount({
     required this.username,
@@ -17,7 +17,8 @@ class AdminAccount {
   String password;
 }
 
-/// Pelanggan yang dikelola admin di halaman Customers.
+/// Akun customer. Dikelola admin di halaman Customers, dan dipakai
+/// customer sendiri untuk login dan Account Settings.
 class Customer {
   Customer({
     required this.id,
@@ -66,8 +67,8 @@ class OrderItem {
   final String serviceId;
   final String serviceName;
   final int pricePerKg;
-  final double qty;
-  final String detail;
+  double qty;
+  String detail;
 
   int get subtotal => (pricePerKg * qty).round();
 }
@@ -87,6 +88,23 @@ extension OrderStatusX on OrderStatus {
   }
 }
 
+enum PaymentMethod { cash, eWallet, bankTransfer, creditCard }
+
+extension PaymentMethodX on PaymentMethod {
+  String get label {
+    switch (this) {
+      case PaymentMethod.cash:
+        return 'Cash';
+      case PaymentMethod.eWallet:
+        return 'E-Wallet';
+      case PaymentMethod.bankTransfer:
+        return 'Bank Transfer';
+      case PaymentMethod.creditCard:
+        return 'Credit Card';
+    }
+  }
+}
+
 class LaundryOrder {
   LaundryOrder({
     required this.id,
@@ -98,10 +116,14 @@ class LaundryOrder {
     required this.items,
     this.note = '',
     this.status = OrderStatus.received,
+    this.paymentMethod,
+    this.paid = false,
   });
 
   final String id;
   final String customerId;
+  // Data customer disalin saat order dibuat (snapshot), supaya order lama
+  // tetap terbaca walau akun customer-nya sudah diubah atau dihapus.
   final String customerName;
   final String customerAddress;
   final String customerPhone;
@@ -109,6 +131,8 @@ class LaundryOrder {
   final List<OrderItem> items;
   String note;
   OrderStatus status;
+  PaymentMethod? paymentMethod;
+  bool paid;
 
   int get total => items.fold(0, (sum, i) => sum + i.subtotal);
   double get totalQty => items.fold(0.0, (sum, i) => sum + i.qty);

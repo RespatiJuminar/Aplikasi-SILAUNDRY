@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../data/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/shell.dart';
+import 'shell.dart';
 import 'customers_page.dart';
 
 class NewUserPage extends StatefulWidget {
