@@ -97,4 +97,4 @@ Di halaman login tampil "Database MySQL aktif - data tersimpan" jika koneksi ber
 |---|---|---|
 | Raditya Aji Respati Juminar | Hacker | Desain UI, DB, membuat aplikasi, integrasi DB, Dashboard fitur reporting |
 | Sufyan Hamdanu Sahvirdan | Hutler | Laporan proposal |
-| Ganendra Bima Pranaja | Captain | none |
+| Ganendra Bima Pranaja | Captain | membantu laporan |
