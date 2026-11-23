@@ -91,3 +91,10 @@ Di halaman login tampil "Database MySQL aktif - data tersimpan" jika koneksi ber
         theme.dart
     database/silaundry.sql   skema, contoh transaksi, dan query laporan
     docs/                    gambar untuk README
+
+## Anggota Kelompok dan Pembagian Tugas
+| Nama | Sebagai | Pekerjaan |
+|---|---|---|
+| Raditya Aji Respati Juminar | Hacker | Desain UI, DB, membuat aplikasi, integrasi DB, Dashboard fitur reporting |
+| Sufyan Hamdanu Sahvirdan | Hutler | Laporan proposal |
+| Ganendra Bima Pranaja | Captain | none |
