@@ -387,37 +387,60 @@ class AppState extends ChangeNotifier {
   }
 
   // ---------------- Laporan (reporting dashboard admin) ----------------
-  static const int reportWeeks = 6;
 
-  /// Data untuk grafik di dashboard admin.
-  /// Jika database aktif, data diambil dengan query SQL (JOIN + GROUP BY di
+  static const List<String> _monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+  ];
+
+  /// Data untuk grafik di dashboard admin, sesuai pilihan [filter]:
+  /// periode (FILTER) dan pengelompokan tren per hari/minggu/bulan (GROUPING).
+  /// Jika database aktif, data diambil dengan query SQL (JOIN, WHERE, GROUP BY di
   /// `db_service.dart`). Jika tidak, dihitung dari data yang ada di memori.
-  Future<ReportData> loadReport() async {
+  Future<ReportData> loadReport({ReportFilter filter = const ReportFilter()}) async {
+    final daysBack = filter.days - 1; // hari ini + (days - 1) hari sebelumnya
     if (usingDatabase) {
       try {
         await _writes; // pastikan semua perubahan sudah tertulis ke database
-        final revenue = await _dbs.queryRevenueByService();
-        final buckets = await _dbs.queryOrdersPerWeek();
-        final status = await _dbs.queryOrdersByStatus();
-        final weekly = List<int>.filled(reportWeeks, 0);
-        buckets.forEach((bucket, count) {
-          if (bucket >= 0 && bucket < reportWeeks) {
-            weekly[reportWeeks - 1 - bucket] += count;
-          }
-        });
-        return _buildReport(revenue, weekly, status);
+        final revenue = await _dbs.queryRevenueByService(daysBack);
+        final buckets = await _dbs.queryTrend(filter.unit, daysBack);
+        final status = await _dbs.queryOrdersByStatus(daysBack);
+        return _buildReport(filter, revenue, buckets, status);
       } catch (e) {
         debugPrint('Query laporan gagal, memakai data di memori: $e');
       }
     }
-    return _reportFromMemory();
+    return _reportFromMemory(filter);
   }
 
-  ReportData _reportFromMemory() {
+  DateTime _today() {
+    final n = DateTime.now();
+    return DateTime(n.year, n.month, n.day);
+  }
+
+  /// Nomor kelompok sebuah tanggal: 0 = hari/minggu/bulan ini, 1 = sebelumnya, dst.
+  /// (sama dengan perhitungan bucket pada query SQL).
+  int _bucketOf(DateTime d, TrendUnit unit, DateTime today) {
+    final daysAgo = today.difference(DateTime(d.year, d.month, d.day)).inDays;
+    switch (unit) {
+      case TrendUnit.day:
+        return daysAgo;
+      case TrendUnit.week:
+        return daysAgo ~/ 7;
+      case TrendUnit.month:
+        return (today.year * 12 + today.month) - (d.year * 12 + d.month);
+    }
+  }
+
+  /// Cadangan jika database tidak aktif: hitung dari daftar order di memori.
+  ReportData _reportFromMemory(ReportFilter filter) {
+    final today = _today();
+    final start = today.subtract(Duration(days: filter.days - 1));
+    final inPeriod = orders.where((o) => !o.date.isBefore(start)).toList();
+
     final revenue = <ReportPoint>[];
     for (final s in services) {
       var sum = 0;
-      for (final o in orders) {
+      for (final o in inPeriod) {
         for (final i in o.items) {
           if (i.serviceId == s.id) sum += i.subtotal;
         }
@@ -425,37 +448,69 @@ class AppState extends ChangeNotifier {
       revenue.add(ReportPoint(s.name, sum.toDouble()));
     }
 
-    final now = DateTime.now();
-    final weekly = List<int>.filled(reportWeeks, 0);
-    for (final o in orders) {
-      final days = now.difference(o.date).inDays;
-      if (days < 0) continue;
-      final bucket = days ~/ 7;
-      if (bucket < reportWeeks) weekly[reportWeeks - 1 - bucket]++;
+    final buckets = <int, int>{};
+    for (final o in inPeriod) {
+      final bucket = _bucketOf(o.date, filter.unit, today);
+      buckets[bucket] = (buckets[bucket] ?? 0) + 1;
     }
 
     final status = <OrderStatus, int>{
-      for (final st in OrderStatus.values) st: countByStatus(st),
+      for (final st in OrderStatus.values) st: 0,
     };
-    return _buildReport(revenue, weekly, status);
+    for (final o in inPeriod) {
+      status[o.status] = (status[o.status] ?? 0) + 1;
+    }
+    return _buildReport(filter, revenue, buckets, status);
+  }
+
+  String _bucketLabel(TrendUnit unit, int bucket, DateTime today) {
+    switch (unit) {
+      case TrendUnit.day:
+        {
+          final date = today.subtract(Duration(days: bucket));
+          return '${date.day}/${date.month}';
+        }
+      case TrendUnit.week:
+        {
+          // Tanggal awal rentang 7 hari tersebut.
+          final date = today.subtract(Duration(days: bucket * 7 + 6));
+          return '${date.day}/${date.month}';
+        }
+      case TrendUnit.month:
+        {
+          final index = today.year * 12 + (today.month - 1) - bucket;
+          return '${_monthNames[index % 12]} ${(index ~/ 12) % 100}';
+        }
+    }
   }
 
   ReportData _buildReport(
+    ReportFilter filter,
     List<ReportPoint> revenue,
-    List<int> weekly,
+    Map<int, int> buckets,
     Map<OrderStatus, int> status,
   ) {
-    final now = DateTime.now();
-    final weekPoints = <ReportPoint>[];
-    for (var i = 0; i < weekly.length; i++) {
-      // Tanggal awal tiap rentang 7 hari, dari yang terlama sampai minggu ini.
-      final bucket = weekly.length - 1 - i;
-      final start = now.subtract(Duration(days: bucket * 7 + 6));
-      weekPoints.add(ReportPoint('${start.day}/${start.month}', weekly[i].toDouble()));
+    final today = _today();
+    final start = today.subtract(Duration(days: filter.days - 1));
+    final count = switch (filter.unit) {
+      TrendUnit.day => filter.days,
+      TrendUnit.week => (filter.days / 7).ceil(),
+      TrendUnit.month => (today.year * 12 + today.month) - (start.year * 12 + start.month) + 1,
+    };
+
+    // Dari kelompok terlama (kiri) sampai terbaru (kanan); yang kosong bernilai 0.
+    final trend = <ReportPoint>[];
+    for (var i = 0; i < count; i++) {
+      final bucket = count - 1 - i;
+      trend.add(ReportPoint(
+        _bucketLabel(filter.unit, bucket, today),
+        (buckets[bucket] ?? 0).toDouble(),
+      ));
     }
+
     return ReportData(
       revenueByService: revenue,
-      ordersPerWeek: weekPoints,
+      trend: trend,
       ordersByStatus: [
         for (final st in OrderStatus.values)
           ReportPoint(st.label, (status[st] ?? 0).toDouble()),

@@ -149,31 +149,57 @@ const _sqlDeleteOrder = 'DELETE FROM orders WHERE id = :id';
 
 
 // ---------------------------------------------------------------------------
-// Query LAPORAN (reporting dashboard): gabungan beberapa tabel dengan JOIN
-// dan pengelompokan GROUP BY. Hasilnya menjadi bar, line, dan pie chart.
+// Query LAPORAN (reporting dashboard): gabungan beberapa tabel dengan JOIN,
+// FILTER periode (WHERE) dan pengelompokan (GROUP BY). Hasilnya menjadi
+// bar, line, dan pie chart.
+//
+// :days_back = jumlah hari ke belakang dari hari ini (filter periode).
+// Contoh: periode 7 hari terakhir -> :days_back = 6 (hari ini + 6 hari sebelumnya).
 // ---------------------------------------------------------------------------
 
-// Perbandingan layanan: total nilai order tiap layanan (services JOIN order_items).
+// BAR CHART - perbandingan layanan: total nilai order per layanan.
+// services LEFT JOIN order_items (yang ordernya masuk periode), lalu GROUP BY layanan.
 // LEFT JOIN supaya layanan yang belum pernah dipesan tetap tampil dengan nilai 0.
 const _sqlReportRevenueByService = '''
 SELECT s.name AS nama, COALESCE(SUM(i.qty * i.price_per_kg), 0) AS total
 FROM services s
-LEFT JOIN order_items i ON i.service_id = s.id
+LEFT JOIN (
+    SELECT oi.service_id, oi.qty, oi.price_per_kg
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    WHERE o.order_date >= DATE_SUB(CURDATE(), INTERVAL :days_back DAY)
+) i ON i.service_id = s.id
 GROUP BY s.id, s.name
 ORDER BY s.id
 ''';
 
-// Jumlah order per minggu. bucket 0 = 7 hari terakhir, 1 = minggu sebelumnya, dst.
-const _sqlReportOrdersPerWeek = '''
+// LINE CHART - tren jumlah order, dikelompokkan per HARI / MINGGU / BULAN.
+// bucket 0 = hari/minggu/bulan ini, 1 = sebelumnya, dst.
+const _sqlReportTrendByDay = '''
+SELECT DATEDIFF(CURDATE(), DATE(order_date)) AS bucket, COUNT(*) AS jumlah
+FROM orders
+WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL :days_back DAY)
+GROUP BY bucket
+''';
+const _sqlReportTrendByWeek = '''
 SELECT FLOOR(DATEDIFF(CURDATE(), DATE(order_date)) / 7) AS bucket, COUNT(*) AS jumlah
 FROM orders
+WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL :days_back DAY)
+GROUP BY bucket
+''';
+const _sqlReportTrendByMonth = '''
+SELECT PERIOD_DIFF(DATE_FORMAT(CURDATE(), '%Y%m'), DATE_FORMAT(order_date, '%Y%m')) AS bucket,
+       COUNT(*) AS jumlah
+FROM orders
+WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL :days_back DAY)
 GROUP BY bucket
 ''';
 
-// Jumlah order tiap status.
+// PIE CHART - jumlah order tiap status pada periode yang dipilih.
 const _sqlReportOrdersByStatus = '''
 SELECT status, COUNT(*) AS jumlah
 FROM orders
+WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL :days_back DAY)
 GROUP BY status
 ''';
 
@@ -456,9 +482,9 @@ class DbService {
 
   // ---------------- Laporan ----------------
 
-  /// Bar chart: total nilai order tiap layanan.
-  Future<List<ReportPoint>> queryRevenueByService() async {
-    final res = await _c.execute(_sqlReportRevenueByService);
+  /// Bar chart: total nilai order tiap layanan pada periode [daysBack] hari ke belakang.
+  Future<List<ReportPoint>> queryRevenueByService(int daysBack) async {
+    final res = await _c.execute(_sqlReportRevenueByService, {'days_back': daysBack});
     final result = <ReportPoint>[];
     for (final row in res.rows) {
       final m = row.assoc();
@@ -467,9 +493,14 @@ class DbService {
     return result;
   }
 
-  /// Line chart: jumlah order per minggu (kunci = nomor minggu ke belakang).
-  Future<Map<int, int>> queryOrdersPerWeek() async {
-    final res = await _c.execute(_sqlReportOrdersPerWeek);
+  /// Line chart: jumlah order per hari/minggu/bulan (kunci = nomor ke belakang).
+  Future<Map<int, int>> queryTrend(TrendUnit unit, int daysBack) async {
+    final sql = switch (unit) {
+      TrendUnit.day => _sqlReportTrendByDay,
+      TrendUnit.week => _sqlReportTrendByWeek,
+      TrendUnit.month => _sqlReportTrendByMonth,
+    };
+    final res = await _c.execute(sql, {'days_back': daysBack});
     final result = <int, int>{};
     for (final row in res.rows) {
       final m = row.assoc();
@@ -478,9 +509,9 @@ class DbService {
     return result;
   }
 
-  /// Pie chart: jumlah order tiap status.
-  Future<Map<OrderStatus, int>> queryOrdersByStatus() async {
-    final res = await _c.execute(_sqlReportOrdersByStatus);
+  /// Pie chart: jumlah order tiap status pada periode [daysBack] hari ke belakang.
+  Future<Map<OrderStatus, int>> queryOrdersByStatus(int daysBack) async {
+    final res = await _c.execute(_sqlReportOrdersByStatus, {'days_back': daysBack});
     final result = <OrderStatus, int>{
       for (final st in OrderStatus.values) st: 0,
     };

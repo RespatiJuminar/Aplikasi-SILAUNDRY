@@ -263,18 +263,27 @@ class _LinePainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round,
     );
 
-    // Titik, nilai di atas titik, dan label minggu di bawah.
+    // Titik, nilai di atas titik, dan label sumbu X di bawah.
+    // Jika titiknya banyak (misal per hari), titik dibuat kecil, nilai disembunyikan,
+    // dan label sumbu X hanya ditampilkan selang beberapa titik (selalu termasuk yang terbaru).
+    final dotRadius = data.length > 14 ? 3.0 : 5.0;
+    final showValues = data.length <= 12;
+    final labelStep = max(1, (data.length / 7).ceil());
     for (var i = 0; i < points.length; i++) {
-      canvas.drawCircle(points[i], 5, Paint()..color = AppColors.primary);
-      canvas.drawCircle(points[i], 2.2, Paint()..color = Colors.white);
-      _drawText(
-        canvas,
-        data[i].value.round().toString(),
-        Offset(points[i].dx, points[i].dy - 20),
-        weight: FontWeight.w600,
-        color: Colors.black87,
-      );
-      _drawText(canvas, data[i].label, Offset(points[i].dx, area.bottom + 8), maxWidth: 48);
+      canvas.drawCircle(points[i], dotRadius, Paint()..color = AppColors.primary);
+      canvas.drawCircle(points[i], dotRadius * 0.44, Paint()..color = Colors.white);
+      if (showValues) {
+        _drawText(
+          canvas,
+          data[i].value.round().toString(),
+          Offset(points[i].dx, points[i].dy - 20),
+          weight: FontWeight.w600,
+          color: Colors.black87,
+        );
+      }
+      if ((data.length - 1 - i) % labelStep == 0) {
+        _drawText(canvas, data[i].label, Offset(points[i].dx, area.bottom + 8), maxWidth: 48);
+      }
     }
   }
 

@@ -138,6 +138,43 @@ class LaundryOrder {
   double get totalQty => items.fold(0.0, (sum, i) => sum + i.qty);
 }
 
+/// Pengelompokan data tren pada line chart: per hari, minggu, atau bulan.
+enum TrendUnit { day, week, month }
+
+extension TrendUnitX on TrendUnit {
+  String get label {
+    switch (this) {
+      case TrendUnit.day:
+        return 'Hari';
+      case TrendUnit.week:
+        return 'Minggu';
+      case TrendUnit.month:
+        return 'Bulan';
+    }
+  }
+}
+
+/// Pilihan filter dan pengelompokan pada dashboard laporan.
+/// [days] = filter periode (berapa hari ke belakang, termasuk hari ini).
+/// [unit] = pengelompokan tren pada line chart.
+class ReportFilter {
+  const ReportFilter({this.days = 42, this.unit = TrendUnit.week});
+
+  final int days;
+  final TrendUnit unit;
+
+  /// Daftar pilihan periode: jumlah hari -> nama yang ditampilkan.
+  static const Map<int, String> periodOptions = {
+    7: '7 hari terakhir',
+    14: '14 hari terakhir',
+    30: '30 hari terakhir',
+    42: '6 minggu terakhir',
+    90: '90 hari terakhir',
+  };
+
+  String get periodLabel => periodOptions[days] ?? '$days hari terakhir';
+}
+
 /// Satu titik data pada grafik laporan (bar, line, dan pie chart).
 class ReportPoint {
   const ReportPoint(this.label, this.value);
@@ -150,15 +187,16 @@ class ReportPoint {
 class ReportData {
   const ReportData({
     required this.revenueByService,
-    required this.ordersPerWeek,
+    required this.trend,
     required this.ordersByStatus,
   });
 
   /// Perbandingan layanan: total nilai order tiap layanan (Rp). Untuk bar chart.
   final List<ReportPoint> revenueByService;
 
-  /// Jumlah order tiap minggu, dari minggu terlama ke minggu ini. Untuk line chart.
-  final List<ReportPoint> ordersPerWeek;
+  /// Jumlah order per hari/minggu/bulan (sesuai pengelompokan), dari yang terlama
+  /// sampai yang terbaru. Untuk line chart.
+  final List<ReportPoint> trend;
 
   /// Jumlah order tiap status. Untuk pie chart.
   final List<ReportPoint> ordersByStatus;

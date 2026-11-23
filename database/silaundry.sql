@@ -143,24 +143,49 @@ DELETE FROM orders WHERE id IN ('ORD-9001', 'ORD-9002');
 
 -- ---------------------------------------------------------------------
 -- BAGIAN 6. QUERY LAPORAN (angka di grafik dashboard admin berasal dari
--- ketiga query ini; dijalankan aplikasi lewat db_service.dart)
+-- query-query ini; dijalankan aplikasi lewat db_service.dart)
 -- Hasilnya berisi jika aplikasi sudah memasukkan data contoh
 -- (jalankan aplikasinya minimal satu kali).
+--
+-- FILTER PERIODE: ubah @days_back (= jumlah hari periode dikurangi 1)
+--   7 hari terakhir = 6 | 30 hari = 29 | 6 minggu (42 hari) = 41 | 90 hari = 89
+-- GROUPING TREN: pilih salah satu query 6b (per hari / minggu / bulan)
 -- ---------------------------------------------------------------------
+SET @days_back = 41;   -- 6 minggu terakhir
 
 -- 6a. BAR CHART - perbandingan layanan: total nilai order per layanan
 SELECT s.name AS nama, COALESCE(SUM(i.qty * i.price_per_kg), 0) AS total
 FROM services s
-LEFT JOIN order_items i ON i.service_id = s.id
+LEFT JOIN (
+    SELECT oi.service_id, oi.qty, oi.price_per_kg
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    WHERE o.order_date >= DATE_SUB(CURDATE(), INTERVAL @days_back DAY)
+) i ON i.service_id = s.id
 GROUP BY s.id, s.name
 ORDER BY s.id;
 
--- 6b. LINE CHART - jumlah order per minggu (bucket 0 = 7 hari terakhir)
+-- 6b-1. LINE CHART - jumlah order per HARI
+SELECT DATEDIFF(CURDATE(), DATE(order_date)) AS bucket, COUNT(*) AS jumlah
+FROM orders
+WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL @days_back DAY)
+GROUP BY bucket;
+
+-- 6b-2. LINE CHART - jumlah order per MINGGU (bucket 0 = 7 hari terakhir)
 SELECT FLOOR(DATEDIFF(CURDATE(), DATE(order_date)) / 7) AS bucket, COUNT(*) AS jumlah
 FROM orders
+WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL @days_back DAY)
+GROUP BY bucket;
+
+-- 6b-3. LINE CHART - jumlah order per BULAN
+SELECT PERIOD_DIFF(DATE_FORMAT(CURDATE(), '%Y%m'), DATE_FORMAT(order_date, '%Y%m')) AS bucket,
+       COUNT(*) AS jumlah
+FROM orders
+WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL @days_back DAY)
 GROUP BY bucket;
 
 -- 6c. PIE CHART - jumlah order per status
 SELECT status, COUNT(*) AS jumlah
 FROM orders
+WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL @days_back DAY)
 GROUP BY status;

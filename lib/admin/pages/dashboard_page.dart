@@ -360,7 +360,8 @@ class _ReportSection extends StatefulWidget {
 }
 
 class _ReportSectionState extends State<_ReportSection> {
-  late Future<ReportData> _future = appState.loadReport();
+  ReportFilter _filter = const ReportFilter();
+  late Future<ReportData> _future = appState.loadReport(filter: _filter);
 
   @override
   void initState() {
@@ -374,10 +375,19 @@ class _ReportSectionState extends State<_ReportSection> {
     super.dispose();
   }
 
+  /// Dimuat ulang otomatis saat data berubah (order baru, status berubah, dst.).
   void _reload() {
     if (!mounted) return;
     setState(() {
-      _future = appState.loadReport();
+      _future = appState.loadReport(filter: _filter);
+    });
+  }
+
+  /// Dipanggil saat pengguna mengganti filter periode atau pengelompokan tren.
+  void _apply(ReportFilter filter) {
+    setState(() {
+      _filter = filter;
+      _future = appState.loadReport(filter: filter);
     });
   }
 
@@ -400,6 +410,47 @@ class _ReportSectionState extends State<_ReportSection> {
             ],
           ),
           const SizedBox(height: 14),
+          // Kontrol FILTER (periode) dan GROUPING (pengelompokan tren).
+          Wrap(
+            spacing: 24,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
+              SizedBox(
+                width: 240,
+                child: AppDropdown<int>(
+                  label: 'Filter periode',
+                  value: _filter.days,
+                  items: [
+                    for (final e in ReportFilter.periodOptions.entries)
+                      DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) _apply(ReportFilter(days: v, unit: _filter.unit));
+                  },
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Kelompokkan tren per', style: AppText.label),
+                  const SizedBox(height: 4),
+                  SegmentedButton<TrendUnit>(
+                    segments: [
+                      for (final u in TrendUnit.values)
+                        ButtonSegment<TrendUnit>(value: u, label: Text(u.label)),
+                    ],
+                    selected: {_filter.unit},
+                    onSelectionChanged: (selection) {
+                      _apply(ReportFilter(days: _filter.days, unit: selection.first));
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           FutureBuilder<ReportData>(
             future: _future,
             builder: (context, snapshot) {
@@ -417,17 +468,18 @@ class _ReportSectionState extends State<_ReportSection> {
               final cards = <Widget>[
                 _ChartCard(
                   title: 'Perbandingan Layanan',
-                  subtitle: 'Total nilai order per layanan (Rp)',
+                  subtitle: 'Total nilai order per layanan (Rp) - ${_filter.periodLabel}',
                   child: ReportBarChart(data: data.revenueByService),
                 ),
                 _ChartCard(
                   title: 'Tren Order',
-                  subtitle: 'Jumlah order per minggu (6 minggu terakhir)',
-                  child: ReportLineChart(data: data.ordersPerWeek),
+                  subtitle:
+                      'Jumlah order per ${_filter.unit.label.toLowerCase()} - ${_filter.periodLabel}',
+                  child: ReportLineChart(data: data.trend),
                 ),
                 _ChartCard(
                   title: 'Status Order',
-                  subtitle: 'Komposisi order saat ini',
+                  subtitle: 'Komposisi order - ${_filter.periodLabel}',
                   child: ReportPieChart(
                     data: data.ordersByStatus,
                     colors: [

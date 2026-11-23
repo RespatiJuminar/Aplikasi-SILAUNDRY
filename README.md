@@ -1,67 +1,46 @@
-# SiLaundry - Prototype Desktop (Admin + Customer) - Flutter + MySQL
+# SiLaundry - Aplikasi Desktop Manajemen Laundry (Flutter + MySQL)
 
-Satu proyek untuk dua sisi aplikasi. Di halaman login pilih **Customer** atau **Admin**.
-Data disimpan di database MySQL (XAMPP) dan dipakai bersama: order yang dibuat customer
-langsung terlihat admin, dan status yang diubah admin langsung terlihat customer.
+Aplikasi desktop Windows untuk mengelola usaha laundry, dibuat dengan **Flutter (Dart)** dan
+database **MySQL (XAMPP)**. Ada dua peran: **Admin** (kelola customer, order, layanan, dan
+melihat laporan) dan **Customer** (membuat order dan membayar). Di halaman login pilih Customer
+atau Admin.
 
-## Persiapan
+## Dashboard Laporan (Data Reporting)
 
-1. Buka **XAMPP Control Panel**, klik **Start** pada **MySQL** (dan Apache jika ingin memakai phpMyAdmin).
-2. Pasang paket MySQL sekali di folder proyek:
+Dashboard admin memiliki bagian **Business Report** yang datanya diambil dari database MySQL
+lewat query SQL (JOIN, WHERE, dan GROUP BY).
 
-       flutter pub add mysql_client
+![Dashboard admin](docs/dashboard-admin.png)
 
-   (Jika sebelumnya sempat memasang paket SQLite: `flutter pub remove sqflite_common_ffi sqlite3_flutter_libs`)
-3. Pengaturan koneksi ada di `lib/shared/data/db_service.dart`, kelas `DbConfig`.
-   Isi bawaan di zip ini: host 127.0.0.1, **port 3307**, user root, password kosong,
-   database **silaundry_app**. **Isi `password` sesuai password MySQL XAMPP-mu** dan ubah
-   port jika MySQL-mu bukan di 3307 (bawaan XAMPP 3306).
+*Dashboard admin: ringkasan, filter periode, pengelompokan tren, dan tiga grafik.*
 
-## Cara menjalankan (Windows + VS Code)
+![Dashboard setelah filter diubah](docs/dashboard-filter.png)
 
-1. `flutter create silaundry --platforms=windows`
-2. Ganti folder `lib/` dan `assets/` proyek itu dengan folder `lib/` dan `assets/` dari zip ini.
-   Folder `database/` berisi file SQL untuk dokumentasi.
-3. Di `pubspec.yaml` proyek, tambahkan di bagian `flutter:`
-   ```
-   assets:
-     - assets/images/
-   ```
-4. Hapus `test/widget_test.dart` (bawaan template).
-5. `flutter run -d windows` (harus Windows desktop, bukan Chrome, karena koneksi MySQL memakai socket).
+*Hasil setelah filter periode dan pengelompokan tren diganti.*
 
-Database `silaundry` dan 5 tabelnya dibuat OTOMATIS saat pertama dijalankan, lalu diisi data
-contoh. Buka `http://localhost/phpmyadmin` dan refresh untuk melihatnya.
-Di halaman login tampil tulisan "Database MySQL aktif - data tersimpan" jika koneksi berhasil.
-Jika tampil "Database tidak aktif", cek apakah MySQL di XAMPP sudah Start (aplikasi tetap
-jalan dengan data sementara).
+### Pemenuhan indikator penilaian
 
-## Dashboard laporan (admin)
-
-Di halaman Dashboard admin ada bagian **Business Report** dengan 3 grafik:
+| Indikator | Pemenuhan | Letak kode |
+|---|---|---|
+| 1. Data diambil dari database dengan query yang sesuai | Tiga query SQL berbeda (JOIN `services` + `order_items` + `orders`, GROUP BY). Pojok kanan atas Business Report menampilkan "Sumber data: query MySQL" | `lib/shared/data/db_service.dart` (`_sqlReport...`), dipanggil `appState.loadReport()` di `lib/shared/data/app_state.dart` |
+| 2. Fitur data filtering atau data grouping | **Filtering:** dropdown *Filter periode* (7, 14, 30, 42, 90 hari terakhir), diterapkan ke ketiga grafik lewat `WHERE order_date >= ...`. **Grouping:** *Kelompokkan tren per* Hari / Minggu / Bulan pada line chart (`GROUP BY` berbeda), dan GROUP BY layanan serta status | `lib/admin/pages/dashboard_page.dart` (kontrol), `db_service.dart` (query) |
+| 3. Minimal 3 jenis chart | **Bar chart** (perbandingan layanan), **line chart** (tren order), **pie chart** (komposisi status order) | `lib/admin/widgets/charts.dart` |
 
 | Grafik | Isi | Query |
 |---|---|---|
-| Bar chart | Perbandingan layanan: total nilai order per layanan | `services` LEFT JOIN `order_items` + `GROUP BY` |
-| Line chart | Tren jumlah order per minggu (6 minggu terakhir) | `orders` + `GROUP BY` minggu |
-| Pie chart | Komposisi order per status | `orders` + `GROUP BY status` |
+| Bar chart | Total nilai order per layanan (perbandingan produk) | `services` LEFT JOIN `order_items` JOIN `orders`, `GROUP BY` layanan |
+| Line chart | Jumlah order per hari, minggu, atau bulan | `orders`, `GROUP BY` hari/minggu/bulan |
+| Pie chart | Komposisi order per status | `orders`, `GROUP BY status` |
 
-Query ada di `lib/shared/data/db_service.dart` (`_sqlReport...`), dipanggil lewat
-`appState.loadReport()`, dan digambar oleh `lib/admin/widgets/charts.dart`.
-Grafik otomatis dimuat ulang saat ada order baru atau status berubah. Query yang sama ada di
-`database/silaundry.sql` bagian 6. Jika database tidak aktif, grafik memakai data di memori.
+Query yang sama dapat dijalankan manual di phpMyAdmin: `database/silaundry.sql` bagian 6
+(ubah `@days_back` untuk filter periode). Grafik dimuat ulang otomatis saat ada order baru
+atau status order berubah.
 
-Data contoh berisi 18 order tersebar 6 minggu. Jika database `silaundry_app` sudah terlanjur
-terisi dari versi sebelumnya (data contoh lama), kosongkan dulu supaya data baru dimasukkan:
-di phpMyAdmin tab SQL jalankan `DROP DATABASE silaundry_app;` lalu jalankan aplikasi lagi.
+## Fitur transactional
 
-## Akun demo
-
-| Masuk sebagai | Username | Password |
-|---|---|---|
-| Admin | `admin` | `admin12345` |
-| Customer | `budi01` | `rahasia12345` |
-| Customer lain | `siti_a`, `andi22` | `rahasia12345` |
+"Buat Order" menulis ke tabel `orders` dan `order_items` dalam satu transaksi
+(`START TRANSACTION` ... `COMMIT`, atau `ROLLBACK` jika ada yang gagal). Lihat method
+`insertOrder` di `lib/shared/data/db_service.dart`.
 
 ## Tabel dan relasi
 
@@ -70,33 +49,45 @@ di phpMyAdmin tab SQL jalankan `DROP DATABASE silaundry_app;` lalu jalankan apli
     services  1 --- N order_items   (order_items.service_id -> services.id)
     admins                          (akun admin)
 
-## Fitur transactional
+## Cara menjalankan (Windows + VS Code)
 
-"Buat Order" menulis ke tabel `orders` dan `order_items` dalam satu transaksi
-(`START TRANSACTION` ... `COMMIT`, atau `ROLLBACK` jika ada yang gagal).
-Lihat method `insertOrder` di `lib/shared/data/db_service.dart`.
-Bahan screenshot di phpMyAdmin: `database/silaundry.sql` (bagian 2 sampai 4).
+1. Buka **XAMPP Control Panel**, klik **Start** pada **MySQL**.
+2. Clone repositori ini, lalu di folder proyek jalankan:
 
-## Struktur folder (dikelompokkan per kategori)
+       flutter pub get
+       flutter pub add mysql_client
+
+3. Buka `lib/shared/data/db_service.dart`, kelas `DbConfig`, lalu sesuaikan dengan MySQL-mu:
+   host `127.0.0.1`, **port** (bawaan XAMPP 3306), user `root`, **password**, dan database
+   `silaundry_app`.
+4. Jalankan `flutter run -d windows`. Harus Windows desktop (bukan Chrome).
+
+Database `silaundry_app` dan 5 tabelnya dibuat otomatis saat pertama dijalankan, lalu diisi data
+contoh (18 order dalam 6 minggu agar grafik terisi). Jika sudah terisi data lama dan ingin
+mengulang, jalankan `DROP DATABASE silaundry_app;` di phpMyAdmin lalu jalankan aplikasi lagi.
+Di halaman login tampil "Database MySQL aktif - data tersimpan" jika koneksi berhasil.
+
+### Akun demo
+
+| Masuk sebagai | Username | Password |
+|---|---|---|
+| Admin | `admin` | `admin12345` |
+| Customer | `budi01` | `rahasia12345` |
+
+## Struktur folder
 
     lib/
-      main.dart                     titik awal aplikasi
-      admin/                        KHUSUS ADMIN
-        pages/                      dashboard, customers, new user, orders, new order,
-                                    order detail, service list, account settings, landing
-        widgets/                    shell.dart (sidebar), dialogs.dart (dialog admin),
-                                    charts.dart (bar, line, pie chart)
-      customer/                     KHUSUS CUSTOMER
-        pages/                      dashboard, service list, orders, new order, checkout,
-                                    payment, account settings, landing
-        widgets/                    shell.dart (sidebar), dialogs.dart (dialog customer)
-      shared/                       DIPAKAI ADMIN DAN CUSTOMER
-        auth/                       login, register, pilihan Customer/Admin
-        data/                       models.dart, app_state.dart, db_service.dart (MySQL)
-        widgets/                    komponen umum (input, tombol, tabel), layout login
-        theme.dart                  warna dan gaya teks
-    database/silaundry.sql          skema + contoh transaksi, rollback, dan query nota
-
-Aturan: file di `admin/` tidak mengimpor file dari `customer/` (dan sebaliknya).
-Keduanya hanya memakai `shared/`. Satu-satunya pengecualian adalah `shared/auth/login_page.dart`
-yang membuka halaman landing admin atau customer sesuai peran yang dipilih.
+      main.dart
+      admin/              khusus admin
+        pages/            dashboard, customers, orders, service list, dst.
+        widgets/          sidebar, dialog, charts.dart (bar, line, pie chart)
+      customer/           khusus customer
+        pages/            dashboard, orders, checkout, payment, dst.
+        widgets/          sidebar, dialog
+      shared/             dipakai admin dan customer
+        auth/             login, register
+        data/             models.dart, app_state.dart, db_service.dart (semua SQL)
+        widgets/          komponen umum
+        theme.dart
+    database/silaundry.sql   skema, contoh transaksi, dan query laporan
+    docs/                    gambar untuk README
