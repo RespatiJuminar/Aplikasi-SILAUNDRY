@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../data/app_state.dart';
-import '../data/models.dart';
-import '../theme.dart';
-import '../widgets/common.dart';
-import 'shell.dart';
+import '../../shared/data/app_state.dart';
+import '../../shared/data/models.dart';
+import '../../shared/theme.dart';
+import '../../shared/widgets/common.dart';
+import '../widgets/shell.dart';
 import 'payment_page.dart';
 
 class DashboardPage extends StatelessWidget {

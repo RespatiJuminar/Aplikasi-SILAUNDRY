@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../data/app_state.dart';
-import '../theme.dart';
-import '../widgets/common.dart';
-import 'shell.dart';
+import '../../shared/data/app_state.dart';
+import '../../shared/theme.dart';
+import '../../shared/widgets/common.dart';
+import '../widgets/shell.dart';
 
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({super.key});

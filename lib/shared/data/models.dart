@@ -137,3 +137,29 @@ class LaundryOrder {
   int get total => items.fold(0, (sum, i) => sum + i.subtotal);
   double get totalQty => items.fold(0.0, (sum, i) => sum + i.qty);
 }
+
+/// Satu titik data pada grafik laporan (bar, line, dan pie chart).
+class ReportPoint {
+  const ReportPoint(this.label, this.value);
+
+  final String label;
+  final double value;
+}
+
+/// Seluruh data untuk dashboard laporan admin.
+class ReportData {
+  const ReportData({
+    required this.revenueByService,
+    required this.ordersPerWeek,
+    required this.ordersByStatus,
+  });
+
+  /// Perbandingan layanan: total nilai order tiap layanan (Rp). Untuk bar chart.
+  final List<ReportPoint> revenueByService;
+
+  /// Jumlah order tiap minggu, dari minggu terlama ke minggu ini. Untuk line chart.
+  final List<ReportPoint> ordersPerWeek;
+
+  /// Jumlah order tiap status. Untuk pie chart.
+  final List<ReportPoint> ordersByStatus;
+}

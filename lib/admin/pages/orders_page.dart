@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import '../data/app_state.dart';
-import '../data/models.dart';
-import '../theme.dart';
-import '../widgets/common.dart';
-import 'dialogs.dart';
-import 'shell.dart';
-import 'checkout_page.dart';
+import '../../shared/data/app_state.dart';
+import '../../shared/data/models.dart';
+import '../../shared/theme.dart';
+import '../../shared/widgets/common.dart';
+import '../widgets/dialogs.dart';
+import '../widgets/shell.dart';
 import 'new_order_page.dart';
-import 'payment_page.dart';
+import 'order_detail_page.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -17,28 +16,26 @@ class OrdersPage extends StatefulWidget {
 }
 
 class _OrdersPageState extends State<OrdersPage> {
+  String _query = '';
   String? _selectedId;
 
-  static const _flex = [2, 3, 2, 2, 2, 2];
+  static const _flex = [2, 3, 3, 3, 3, 2];
 
-  LaundryOrder? _find(List<LaundryOrder> list) {
-    for (final o in list) {
+  List<LaundryOrder> get _filtered {
+    final q = _query.toLowerCase();
+    return appState.orders
+        .where((o) =>
+            o.id.toLowerCase().contains(q) ||
+            o.customerName.toLowerCase().contains(q) ||
+            o.status.label.toLowerCase().contains(q))
+        .toList();
+  }
+
+  LaundryOrder? get _selected {
+    for (final o in appState.orders) {
       if (o.id == _selectedId) return o;
     }
     return null;
-  }
-
-  void _edit(List<LaundryOrder> list) {
-    final o = _find(list);
-    if (o == null) {
-      showMessage(context, 'Select an order from the list first');
-      return;
-    }
-    if (o.status != OrderStatus.received) {
-      showMessage(context, 'Only orders with status Received can be edited');
-      return;
-    }
-    showEditOrderDialog(context, o);
   }
 
   @override
@@ -49,20 +46,28 @@ class _OrdersPageState extends State<OrdersPage> {
       child: ListenableBuilder(
         listenable: appState,
         builder: (context, _) {
-          final list = appState.myOrders;
+          final list = _filtered;
           return Padding(
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 22),
             child: Column(
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    SearchField(onChanged: (v) => setState(() => _query = v)),
+                    const Spacer(),
                     AppButton(
                       text: 'Edit Order',
                       color: AppColors.danger,
                       width: 176,
                       height: 50,
-                      onPressed: () => _edit(list),
+                      onPressed: () {
+                        final o = _selected;
+                        if (o == null) {
+                          showMessage(context, 'Select an order from the list first');
+                          return;
+                        }
+                        showEditOrderDialog(context, o);
+                      },
                     ),
                     const SizedBox(width: 22),
                     AppButton(
@@ -80,12 +85,12 @@ class _OrdersPageState extends State<OrdersPage> {
                     child: Column(
                       children: [
                         const TableHead(
-                          labels: ['Order ID', 'Service', 'Date', 'Total', 'Status', ''],
+                          labels: ['Order ID', 'Customer', 'Date', 'Total', 'Status', ''],
                           flex: _flex,
                         ),
                         Expanded(
                           child: list.isEmpty
-                              ? const Center(child: Text("You don't have any order yet"))
+                              ? const Center(child: Text('No orders found'))
                               : ListView.builder(
                                   itemCount: list.length,
                                   itemBuilder: (context, i) {
@@ -100,7 +105,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                       }),
                                       cells: [
                                         Cell(o.id, bold: true),
-                                        Cell(o.items.map((e) => e.serviceName).join(', ')),
+                                        Cell(o.customerName),
                                         Cell(formatDate(o.date)),
                                         Cell(formatRupiah(o.total)),
                                         Align(
@@ -112,9 +117,9 @@ class _OrdersPageState extends State<OrdersPage> {
                                           child: TextButton(
                                             onPressed: () => replacePage(
                                               context,
-                                              o.paid ? PaymentPage(order: o) : CheckoutPage(order: o),
+                                              OrderDetailPage(order: o),
                                             ),
-                                            child: Text(o.paid ? 'See Detail' : 'Pay Now'),
+                                            child: const Text('See Detail'),
                                           ),
                                         ),
                                       ],

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'account_settings_page.dart';
-import 'dashboard_page.dart';
-import 'orders_page.dart';
-import 'service_list_page.dart';
-import '../theme.dart';
+import '../pages/account_settings_page.dart';
+import '../pages/dashboard_page.dart';
+import '../pages/orders_page.dart';
+import '../pages/service_list_page.dart';
+import '../../shared/theme.dart';
 import 'dialogs.dart';
 
 enum NavItem { dashboard, services, orders, account }

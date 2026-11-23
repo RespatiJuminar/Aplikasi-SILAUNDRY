@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'auth/login_page.dart';
-import 'theme.dart';
+import 'shared/auth/login_page.dart';
+import 'shared/data/app_state.dart';
+import 'shared/theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Membuka database dan memuat data sebelum aplikasi tampil.
+  await appState.init();
   runApp(const SiLaundryApp());
 }
 

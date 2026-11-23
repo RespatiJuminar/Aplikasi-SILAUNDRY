@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../data/app_state.dart';
-import '../data/models.dart';
-import '../theme.dart';
-import '../widgets/common.dart';
-import 'shell.dart';
+import '../../shared/data/app_state.dart';
+import '../../shared/data/models.dart';
+import '../../shared/theme.dart';
+import '../../shared/widgets/common.dart';
+import '../widgets/charts.dart';
+import '../widgets/shell.dart';
 import 'new_order_page.dart';
 import 'orders_page.dart';
 
@@ -20,20 +21,26 @@ class DashboardPage extends StatelessWidget {
         builder: (context, _) {
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(22, 14, 22, 22),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
               children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      const _CategoryPanel(),
-                      const SizedBox(height: 22),
-                      const _RecentOrderPanel(),
-                    ],
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          const _CategoryPanel(),
+                          const SizedBox(height: 22),
+                          const _RecentOrderPanel(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 22),
+                    const SizedBox(width: 300, child: _SummaryColumn()),
+                  ],
                 ),
-                const SizedBox(width: 22),
-                const SizedBox(width: 300, child: _SummaryColumn()),
+                const SizedBox(height: 22),
+                const _ReportSection(),
               ],
             ),
           );
@@ -336,6 +343,154 @@ class _ReportLine extends StatelessWidget {
           Text(label, style: const TextStyle(fontSize: 18, color: AppColors.cardHeader)),
           const Spacer(),
           Text('$value', style: const TextStyle(fontSize: 18, color: AppColors.cardHeader)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dashboard laporan: perbandingan layanan (bar), tren order (line), dan
+/// komposisi status order (pie). Datanya dimuat lewat `appState.loadReport()`
+/// dan dimuat ulang otomatis setiap data berubah.
+class _ReportSection extends StatefulWidget {
+  const _ReportSection();
+
+  @override
+  State<_ReportSection> createState() => _ReportSectionState();
+}
+
+class _ReportSectionState extends State<_ReportSection> {
+  late Future<ReportData> _future = appState.loadReport();
+
+  @override
+  void initState() {
+    super.initState();
+    appState.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    appState.removeListener(_reload);
+    super.dispose();
+  }
+
+  void _reload() {
+    if (!mounted) return;
+    setState(() {
+      _future = appState.loadReport();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Panel(
+      padding: const EdgeInsets.all(20),
+      radius: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Business Report', style: AppText.heading.copyWith(fontSize: 24)),
+              const Spacer(),
+              Text(
+                appState.usingDatabase ? 'Sumber data: query MySQL' : 'Sumber data: memori',
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          FutureBuilder<ReportData>(
+            future: _future,
+            builder: (context, snapshot) {
+              final data = snapshot.data;
+              if (data == null) {
+                return SizedBox(
+                  height: 240,
+                  child: Center(
+                    child: snapshot.hasError
+                        ? Text('Gagal memuat laporan: ${snapshot.error}')
+                        : const CircularProgressIndicator(),
+                  ),
+                );
+              }
+              final cards = <Widget>[
+                _ChartCard(
+                  title: 'Perbandingan Layanan',
+                  subtitle: 'Total nilai order per layanan (Rp)',
+                  child: ReportBarChart(data: data.revenueByService),
+                ),
+                _ChartCard(
+                  title: 'Tren Order',
+                  subtitle: 'Jumlah order per minggu (6 minggu terakhir)',
+                  child: ReportLineChart(data: data.ordersPerWeek),
+                ),
+                _ChartCard(
+                  title: 'Status Order',
+                  subtitle: 'Komposisi order saat ini',
+                  child: ReportPieChart(
+                    data: data.ordersByStatus,
+                    colors: [
+                      statusColor(OrderStatus.received),
+                      statusColor(OrderStatus.onProgress),
+                      statusColor(OrderStatus.completed),
+                    ],
+                  ),
+                ),
+              ];
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth >= 900) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: cards[0]),
+                        const SizedBox(width: 16),
+                        Expanded(child: cards[1]),
+                        const SizedBox(width: 16),
+                        Expanded(child: cards[2]),
+                      ],
+                    );
+                  }
+                  return Column(
+                    children: [
+                      for (final card in cards)
+                        Padding(padding: const EdgeInsets.only(bottom: 16), child: card),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChartCard extends StatelessWidget {
+  const _ChartCard({required this.title, required this.subtitle, required this.child});
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 12),
+          child,
         ],
       ),
     );

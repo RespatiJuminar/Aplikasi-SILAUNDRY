@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../data/app_state.dart';
-import '../data/models.dart';
-import '../auth/login_page.dart';
-import '../theme.dart';
-import '../widgets/common.dart';
+import '../../shared/data/app_state.dart';
+import '../../shared/data/models.dart';
+import '../../shared/auth/login_page.dart';
+import '../../shared/theme.dart';
+import '../../shared/widgets/common.dart';
 
 /// Bingkai dialog umum: border biru muda + tombol X di pojok kanan atas.
 Future<T?> showFramedDialog<T>(

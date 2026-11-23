@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../admin/landing_page.dart' as admin;
-import '../customer/landing_page.dart' as customer;
+import '../../admin/pages/landing_page.dart' as admin;
+import '../../customer/pages/landing_page.dart' as customer;
 import '../data/app_state.dart';
 import '../theme.dart';
 import '../widgets/auth_layout.dart';
@@ -121,6 +121,24 @@ class _LoginPageState extends State<LoginPage> {
                 style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
               ),
             ),
+            const SizedBox(height: 6),
+            Center(
+              child: Text(
+                appState.usingDatabase
+                    ? 'Database MySQL aktif - data tersimpan'
+                    : 'Database tidak aktif (nyalakan MySQL di XAMPP) - data sementara',
+                style: const TextStyle(fontSize: 12, color: Color(0xFFAAAAAA)),
+              ),
+            ),
+            if (!appState.usingDatabase && appState.dbError.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  appState.dbError,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 11, color: Colors.red),
+                ),
+              ),
           ],
         ),
       ),

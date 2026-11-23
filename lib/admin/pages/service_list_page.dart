@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../data/app_state.dart';
-import '../data/models.dart';
-import '../theme.dart';
-import '../widgets/common.dart';
-import 'shell.dart';
+import '../../shared/data/app_state.dart';
+import '../../shared/data/models.dart';
+import '../../shared/theme.dart';
+import '../../shared/widgets/common.dart';
+import '../widgets/dialogs.dart';
+import '../widgets/shell.dart';
 
-/// Daftar layanan laundry. Customer hanya bisa melihat (tidak ada tombol tambah).
 class ServiceListPage extends StatefulWidget {
   const ServiceListPage({super.key});
 
@@ -40,20 +40,30 @@ class _ServiceListPageState extends State<ServiceListPage> {
               final perPage = columns * 2;
               final totalPages = list.isEmpty ? 1 : (list.length / perPage).ceil();
               final page = _page > totalPages - 1 ? totalPages - 1 : _page;
-              final visible = list.skip(page * perPage).take(perPage).toList();
+              final start = page * perPage;
+              final visible = list.skip(start).take(perPage).toList();
 
               return Padding(
                 padding: const EdgeInsets.fromLTRB(40, 14, 40, 18),
                 child: Column(
                   children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: SearchField(
-                        onChanged: (v) => setState(() {
-                          _query = v;
-                          _page = 0;
-                        }),
-                      ),
+                    Row(
+                      children: [
+                        SearchField(
+                          onChanged: (v) => setState(() {
+                            _query = v;
+                            _page = 0;
+                          }),
+                        ),
+                        const Spacer(),
+                        AppButton(
+                          text: '+ Add Now',
+                          width: 160,
+                          height: 40,
+                          radius: 30,
+                          onPressed: () => showAddServiceDialog(context),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 14),
                     Expanded(
@@ -162,6 +172,8 @@ class _ServiceCard extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 4),
+          Text(service.id, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
         ],
       ),
     );

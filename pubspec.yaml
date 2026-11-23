@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  mysql_client: ^0.0.27
 
 flutter:
   uses-material-design: true
